@@ -1,6 +1,7 @@
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
+from handler import GameHandler
 
 # application setup
 app = Flask(__name__)
@@ -32,12 +33,14 @@ class GameMessage():
     def __init__(self, game, player):
         self.status = game.status
         self.game_id = game.id
+        self.moves = game.moves
         self.player = player
 
     def to_dict(self):
         return {
             'game_id': self.game_id,
             'status': self.status,
+            'moves': self.moves,
             'player': self.player
         }
 
@@ -70,6 +73,21 @@ def leave():
         emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
 
 
+@socketio.on('move')
+def move(data):
+    player = request.sid
+    game = Game.query.filter((Game.status == 1) | (Game.status == 2)).filter(
+        (Game.player1 == player) | (Game.player2 == player)).first()
+    if game is None:
+        return
+    if (game.status == 1 and game.player1 == player) or (game.status == 2 and game.player2 == player):
+        valid = GameHandler.handle_move(game, data['move'], game.status)
+        if valid:
+            game.status = 1 if game.status == 2 else 2
+            game.moves += data['move'] + '/'
+            db.session.commit()
+            emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
+            emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
 
 if __name__ == '__main__':
     db.create_all()
