@@ -83,11 +83,3 @@ class GameHandler():
                 return 1 if game.status == 2 else 2
         else:
             return winner + 2
-
-
-
-
-
-
-
-

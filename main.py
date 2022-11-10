@@ -61,7 +61,6 @@ def matchmaking():
         emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
         emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
 
-
 @socketio.on('leave')
 def leave():
     player = request.sid
@@ -71,7 +70,6 @@ def leave():
         db.session.commit()
         emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
         emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
-
 
 @socketio.on('move')
 def move(data):
@@ -88,8 +86,7 @@ def move(data):
         emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
         emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
 
+
 if __name__ == '__main__':
     db.create_all()
     socketio.run(app, host='0.0.0.0')
-
-
