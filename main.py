@@ -80,14 +80,13 @@ def move(data):
         (Game.player1 == player) | (Game.player2 == player)).first()
     if game is None:
         return
-    if (game.status == 1 and game.player1 == player) or (game.status == 2 and game.player2 == player):
-        valid = GameHandler.handle_move(game, data['move'], game.status)
-        if valid:
-            game.status = 1 if game.status == 2 else 2
-            game.moves += data['move'] + '/'
-            db.session.commit()
-            emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
-            emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
+    valid, status = GameHandler.handle_move(game, data['move'], player)
+    if valid:
+        game.status = status
+        game.moves += data['move'] + '/'
+        db.session.commit()
+        emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
+        emit('game', GameMessage(game, 2).to_dict(), room=game.player2)
 
 if __name__ == '__main__':
     db.create_all()
