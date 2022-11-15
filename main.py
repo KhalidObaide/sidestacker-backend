@@ -16,6 +16,8 @@ class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     player1 = db.Column(db.String(80), unique=False, nullable=False)
     player2 = db.Column(db.String(80), unique=False, nullable=True)
+    player1name = db.Column(db.String(80), unique=False, nullable=True)
+    player2name = db.Column(db.String(80), unique=False, nullable=True)
     moves = db.Column(db.String(500), unique=False, nullable=False)
     status = db.Column(db.Integer, unique=False, nullable=False)
     # Game status
@@ -33,6 +35,8 @@ class GameMessage():
     def __init__(self, game, player):
         self.status = game.status
         self.game_id = game.id
+        self.player1_name = game.player1name
+        self.player2_name = game.player2name
         self.moves = game.moves
         self.player = player
 
@@ -41,21 +45,35 @@ class GameMessage():
             'game_id': self.game_id,
             'status': self.status,
             'moves': self.moves,
-            'player': self.player
+            'player': self.player,
+            'player1_name': self.player1_name,
+            'player2_name': self.player2_name
         }
 
 
 @socketio.on('match')
-def matchmaking():
+def matchmaking(data):
     player = request.sid
-    game = Game.query.filter(Game.status == 0).first()
-    if game is None:
-        game = Game(player1=player, player2=None, moves='', status=0)
+    if not data['fullname']:
+        emit('error', 'fullname required', room=player)
+        return
+
+    if data['code'] == 0 : # new game
+        game = Game(
+            player1=player, player2=None,
+            player1name=data['fullname'], player2name=None,
+            moves='', status=0
+        )
         db.session.add(game)
         db.session.commit()
-        emit('game', GameMessage(game, 1).to_dict())
+        emit('game', GameMessage(game, 1).to_dict(), room=player)
     else:
+        game = Game.query.filter(Game.id == data['code']).first()
+        if not game or game.player2:
+            emit('error', 'Game not found', room=player)
+            return
         game.player2 = player
+        game.player2name = data['fullname']
         game.status = 1
         db.session.commit()
         emit('game', GameMessage(game, 1).to_dict(), room=game.player1)
